@@ -10,7 +10,7 @@ const ProductDetails = ({ cart, setCart, wishlist, setWishlist, recentlyViewed, 
 
   useEffect(() => {
     // Fetch specific product
-    axios.get(`http://localhost:5000/api/products/${id}`, { timeout: 500 })
+    axios.get(`http://localhost:5000/api/products/${id}`)
       .then(res => setProduct(res.data))
       .catch(err => {
         console.error(err);
@@ -25,7 +25,7 @@ const ProductDetails = ({ cart, setCart, wishlist, setWishlist, recentlyViewed, 
       });
 
     // Fetch related products (mocking by fetching general list)
-    axios.get(`http://localhost:5000/api/products?limit=8`, { timeout: 500 })
+    axios.get(`http://localhost:5000/api/products?limit=8`)
       .then(res => setRelatedProducts(res.data))
       .catch(err => {
         console.error(err);

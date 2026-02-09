@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 
+const cardColors = [
+  'bg-red-100', 'bg-yellow-100', 'bg-green-100', 'bg-blue-100', 
+  'bg-indigo-100', 'bg-purple-100', 'bg-pink-100', 'bg-teal-100'
+];
+
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(0);
@@ -19,7 +24,7 @@ const Home = () => {
   // Fetch products for infinite scroll behavior
   const fetchProducts = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/products?limit=16&offset=${page * 16}&category=${activeTab}`, { timeout: 500 });
+      const res = await axios.get(`http://localhost:5000/api/products?limit=16&offset=${page * 16}&category=${activeTab}`);
       setProducts(prev => [...prev, ...res.data]);
     } catch (err) {
       console.error(err);
@@ -78,15 +83,19 @@ const Home = () => {
 
       {/* Grid Layout: 2 columns mobile, 5 columns desktop */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 px-2">
-        {products.map(product => (
+        {products.map((product, index) => (
           <div 
             key={product.id} 
             className="bg-white border rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer p-2 group"
             onClick={() => navigate(`/product/${product.id}`)}
           >
             {/* Placeholder image if no images yet */}
-            <div className="aspect-square bg-gray-200 overflow-hidden rounded mb-2">
-              <img src="https://via.placeholder.com/150" alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <div className={`aspect-square ${cardColors[index % cardColors.length]} overflow-hidden rounded mb-2`}>
+              <img 
+                src={product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/150'} 
+                alt={product.name} 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+              />
             </div>
             <div className="flex justify-between items-start">
                 <h3 className="text-sm font-medium truncate flex-1">{product.name}</h3>

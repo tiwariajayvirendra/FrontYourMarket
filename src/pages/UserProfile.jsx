@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const UserProfile = ({ user, cart, wishlist, recentlyViewed, orders }) => {
+const UserProfile = ({ user, setUser, cart, wishlist, recentlyViewed, orders }) => {
   const [activeTab, setActiveTab] = useState('wishlist');
   const navigate = useNavigate();
 
   if (!user) {
     return <div className="text-center py-10">Please login to view your profile.</div>;
   }
+
+  const handleLogout = () => {
+    localStorage.removeItem('user_session');
+    setUser(null);
+    navigate('/login');
+  };
 
   const renderProductList = (products, emptyMessage) => {
     if (!products || products.length === 0) {
@@ -33,10 +39,13 @@ const UserProfile = ({ user, cart, wishlist, recentlyViewed, orders }) => {
         <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
           {user.name.charAt(0).toUpperCase()}
         </div>
-        <div className="text-center md:text-left">
+        <div className="text-center md:text-left flex-1">
           <h1 className="text-2xl font-bold">{user.name}</h1>
           <p className="text-gray-600">{user.email}</p>
           <p className="text-gray-500 text-sm">{user.city}, {user.country}</p>
+        </div>
+        <div>
+          <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Logout</button>
         </div>
       </div>
 

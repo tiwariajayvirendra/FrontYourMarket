@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
-const AdminDashboard = ({ user }) => {
+const AdminDashboard = ({ user, setUser }) => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState({ name: '', price: '', quantity: '', description: '' });
+  const [currentProduct, setCurrentProduct] = useState({ name: '', price: '', quantity: '', description: '', category: '', images: null });
   const [showForm, setShowForm] = useState(false);
 
   // Fetch products on load
@@ -31,7 +33,9 @@ const AdminDashboard = ({ user }) => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        await axios.delete(`http://localhost:5000/api/products/${id}`);
+        await axios.delete(`http://localhost:5000/api/products/${id}`, {
+          headers: { 'x-user-role': user.role }
+        });
         fetchProducts();
       } catch (err) {
         alert('Failed to delete');
@@ -41,15 +45,34 @@ const AdminDashboard = ({ user }) => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    const config = { headers: { 'x-user-role': user.role } };
+
     try {
       if (isEditing) {
-        await axios.put(`http://localhost:5000/api/products/${currentProduct.id}`, currentProduct);
+        // For editing, we send JSON (Backend currently doesn't support updating images via PUT)
+        await axios.put(`http://localhost:5000/api/products/${currentProduct.id}`, currentProduct, config);
       } else {
-        await axios.post('http://localhost:5000/api/products', currentProduct);
+        // For creating, we use FormData to support image uploads
+        const formData = new FormData();
+        formData.append('name', currentProduct.name);
+        formData.append('price', currentProduct.price);
+        formData.append('quantity', currentProduct.quantity);
+        formData.append('description', currentProduct.description);
+        formData.append('category', currentProduct.category);
+        
+        if (currentProduct.images) {
+          for (let i = 0; i < currentProduct.images.length; i++) {
+            formData.append('images', currentProduct.images[i]);
+          }
+        }
+
+        await axios.post('http://localhost:5000/api/products', formData, {
+          headers: { ...config.headers, 'Content-Type': 'multipart/form-data' }
+        });
       }
       setShowForm(false);
       setIsEditing(false);
-      setCurrentProduct({ name: '', price: '', quantity: '', description: '' });
+      setCurrentProduct({ name: '', price: '', quantity: '', description: '', category: '', images: null });
       fetchProducts();
     } catch (err) {
       alert('Failed to save product');
@@ -62,6 +85,12 @@ const AdminDashboard = ({ user }) => {
     setShowForm(true);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('user_session');
+    setUser(null);
+    navigate('/dashboard/admin-loggin');
+  };
+
   if (user?.role !== 'admin') {
     return <div className="text-center text-red-500 mt-10">Access Denied. Admins only.</div>;
   }
@@ -70,12 +99,15 @@ const AdminDashboard = ({ user }) => {
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-        <button 
-          onClick={() => { setShowForm(!showForm); setIsEditing(false); setCurrentProduct({ name: '', price: '', quantity: '', description: '' }); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          {showForm ? 'Cancel' : 'Add New Product'}
-        </button>
+        <div className="space-x-4">
+          <button 
+            onClick={() => { setShowForm(!showForm); setIsEditing(false); setCurrentProduct({ name: '', price: '', quantity: '', description: '', category: '', images: null }); }}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            {showForm ? 'Cancel' : 'Add New Product'}
+          </button>
+          <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Logout</button>
+        </div>
       </div>
 
       {/* Add/Edit Form */}
@@ -86,6 +118,12 @@ const AdminDashboard = ({ user }) => {
             <input className="p-2 border rounded" placeholder="Product Name" value={currentProduct.name} onChange={e => setCurrentProduct({...currentProduct, name: e.target.value})} required />
             <input className="p-2 border rounded" type="number" placeholder="Price (INR)" value={currentProduct.price} onChange={e => setCurrentProduct({...currentProduct, price: e.target.value})} required />
             <input className="p-2 border rounded" type="number" placeholder="Quantity" value={currentProduct.quantity} onChange={e => setCurrentProduct({...currentProduct, quantity: e.target.value})} required />
+            <input className="p-2 border rounded" placeholder="Category" value={currentProduct.category} onChange={e => setCurrentProduct({...currentProduct, category: e.target.value})} required />
+            
+            {!isEditing && (
+              <input className="p-2 border rounded" type="file" multiple accept="image/*" onChange={e => setCurrentProduct({...currentProduct, images: e.target.files})} />
+            )}
+            
             <textarea className="p-2 border rounded md:col-span-2" placeholder="Description" value={currentProduct.description} onChange={e => setCurrentProduct({...currentProduct, description: e.target.value})} />
             <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 md:col-span-2">
               {isEditing ? 'Update Product' : 'Upload Product'}
@@ -109,6 +147,7 @@ const AdminDashboard = ({ user }) => {
             <tr>
               <th className="px-6 py-3">Product</th>
               <th className="px-6 py-3">Price</th>
+              <th className="px-6 py-3">Category</th>
               <th className="px-6 py-3">Stock</th>
               <th className="px-6 py-3">Actions</th>
             </tr>
@@ -118,6 +157,7 @@ const AdminDashboard = ({ user }) => {
               <tr key={product.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 font-medium">{product.name}</td>
                 <td className="px-6 py-4">₹{product.price}</td>
+                <td className="px-6 py-4">{product.category}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-xs ${product.quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {product.quantity > 0 ? `In Stock (${product.quantity})` : 'Out of Stock'}
