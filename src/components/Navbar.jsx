@@ -17,8 +17,8 @@ const Navbar = ({ user, setUser, cartCount }) => {
       {/* Left Side: Company Name and Logo */}
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate('/')}>
-          <img src="/logo.png" alt="Logo" className="w-10 h-10" />
-          <span className="text-2xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors">YourMarket</span>
+          <img src="/jigoogleMarket.png" alt="Logo" className="w-12 h-12 object-contain transition-transform duration-300 group-hover:scale-110" />
+          <span className="text-2xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors">JigoogleMarket</span>
         </div>
 
         {/* Mobile Menu Button & Cart */}

@@ -7,9 +7,25 @@ const cardColors = [
   'bg-indigo-100', 'bg-purple-100', 'bg-pink-100', 'bg-teal-100'
 ];
 
+// A skeleton component to show while cards are loading.
+const ProductCardSkeleton = () => (
+  <div className="bg-white border rounded-lg overflow-hidden p-2">
+    <div className="animate-pulse flex flex-col h-full">
+      <div className="aspect-square bg-gray-200 rounded mb-2"></div>
+      <div className="flex-grow space-y-2 pt-1">
+        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+        <div className="h-3 bg-gray-200 rounded w-full"></div>
+      </div>
+    </div>
+  </div>
+);
+
 const Home = () => {
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [searchParams] = useSearchParams();
   const categoryParam = searchParams.get('category') || 'All';
   const [activeTab, setActiveTab] = useState(categoryParam);
@@ -17,14 +33,19 @@ const Home = () => {
 
   useEffect(() => {
     setActiveTab(categoryParam);
-    setProducts([]); // Reset products on category change
+    setProducts([]);
     setPage(0);
+    setHasMore(true);
   }, [categoryParam]);
 
   // Fetch products for infinite scroll behavior
   const fetchProducts = async () => {
+    setLoading(true);
     try {
       const res = await axios.get(`http://localhost:5000/api/products?limit=16&offset=${page * 16}&category=${activeTab}`);
+      if (res.data.length < 16) {
+        setHasMore(false);
+      }
       setProducts(prev => [...prev, ...res.data]);
     } catch (err) {
       console.error(err);
@@ -38,17 +59,20 @@ const Home = () => {
         images: ['https://via.placeholder.com/150']
       }));
       setProducts(prev => [...prev, ...dummy]);
+      if (page >= 4) setHasMore(false); // Limit dummy data
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchProducts();
-  }, [page, activeTab]);
+  }, [page, activeTab]); // Re-fetch when page or category changes
 
   // Infinite scroll handler
   const handleScroll = () => {
-    if (page >= 5) return;
-    if (window.innerHeight + document.documentElement.scrollTop + 1 >= document.documentElement.scrollHeight) {
+    // Added a 100px buffer to trigger loading a bit earlier
+    if (window.innerHeight + document.documentElement.scrollTop + 100 >= document.documentElement.scrollHeight && !loading && hasMore) {
       setPage(prev => prev + 1);
     }
   };
@@ -56,7 +80,7 @@ const Home = () => {
   useEffect(() => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [page]);
+  }, [loading, hasMore]); // Re-add listener if loading or hasMore changes
 
   const handleTabClick = (tab) => {
     navigate(`/?category=${tab}`);
@@ -86,7 +110,7 @@ const Home = () => {
         {products.map((product, index) => (
           <div 
             key={product.id} 
-            className="bg-white border rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer p-2 group"
+            className="bg-white border rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer p-2 group"
             onClick={() => navigate(`/product/${product.id}`)}
           >
             {/* Placeholder image if no images yet */}
@@ -105,7 +129,18 @@ const Home = () => {
             <p className="text-xs text-gray-500 truncate">{product.description}</p>
           </div>
         ))}
+        {/* Show skeletons on initial category load or when fetching more items */}
+        {loading && (
+          Array.from({ length: products.length === 0 ? 10 : 5 }).map((_, i) => (
+            <ProductCardSkeleton key={`skeleton-${page}-${i}`} />
+          ))
+        )}
       </div>
+
+      {/* Message for end of list */}
+      {!loading && !hasMore && products.length > 0 && (
+        <div className="text-center text-gray-500 py-8 col-span-full">You've reached the end!</div>
+      )}
     </div>
   );
 };
